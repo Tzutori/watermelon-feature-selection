@@ -46,8 +46,8 @@ class watermelon():
         len_data=len(data)
         len_other_data=len(other_data)
         #Silverman's rule of thumb to determine the bandwidth
-        bw=1.06*np.min([np.std(data),scipy.stats.iqr(data)/1.34])*len_data**(-0.2)
-        bw_other=1.06*np.min([np.std(other_data),scipy.stats.iqr(other_data)/1.34])*len_other_data**(-0.2)
+        bw=1.06*np.min([np.std(data),iqr(data)/1.34])*len_data**(-0.2)
+        bw_other=1.06*np.min([np.std(other_data),iqr(other_data)/1.34])*len_other_data**(-0.2)
 
         bw=max(self.min_kde_bw,bw)
         bw_other=max(self.min_kde_bw,bw_other)
@@ -92,7 +92,7 @@ class watermelon():
                     result[class_index,index_feature]=self.getErrorRate(data_this_class,data_other_class)
             return result
         else:
-            combis=scipy.special.comb(n_class,2,True)
+            combis=comb(n_class,2,True)
             result=np.zeros((combis,n_subfeature),dtype='float')
             for index_feature in np.arange(n_subfeature):
                 #calculate the error rate for each class
@@ -175,7 +175,7 @@ class watermelon():
         max_values=np.max(data,axis=0)
         min_values=np.min(data,axis=0)
         #use maimum of Freedman-Diaconis' rule and sturges to calculate bins, set minimum for data with few samples
-        fd_binwidth=2*scipy.stats.iqr(data,axis=0,interpolation='midpoint')*data.shape[0]**(-1/3)
+        fd_binwidth=2*iqr(data,axis=0,interpolation='midpoint')*data.shape[0]**(-1/3)
         n_bins_fd=np.divide(max_values-min_values, fd_binwidth, out=np.zeros_like(fd_binwidth), where=fd_binwidth!=0)
         n_bins_sturges=math.log2(data.shape[0])+1
         nmi_bins=np.ceil(np.clip(np.maximum(n_bins_fd,n_bins_sturges),a_min=self.nmi_min_bins,a_max=data.shape[0])).astype(int)
@@ -277,7 +277,7 @@ class watermelon():
             with Pool(processes=num_multiprocessing) as pool:
                 results=pool.starmap(self.getErrorRateParallel,zip(data_list,repeat(labels),repeat(classes)))
             if self.ovo==True:
-                n_class=scipy.special.comb(n_class,2,True)
+                n_class=comb(n_class,2,True)
             #cache feature scores
             score_of_rest_features=pd.DataFrame(np.zeros((n_class,n_feature),dtype='float'),columns=[str(i) for i in np.arange(n_feature)],dtype='float32')
             #update all feature scores according to BERs
@@ -303,7 +303,7 @@ class watermelon():
         '''calculate correlation and nmi'''
         logger.debug('Calculating spearman coefficients for all features...')
         #feature redundancy matrix according to spearman, nan will be treated as 1
-        spearman_coe=np.abs(np.nan_to_num(scipy.stats.spearmanr(data)[0],nan=1))
+        spearman_coe=np.abs(np.nan_to_num(stats.spearmanr(data)[0],nan=1))
         timer_spearman=time.time()
         logger.debug('Time elapsed: {:.2f}s'.format(timer_spearman-timer_first))
         #feature relevance matrix according to nmi

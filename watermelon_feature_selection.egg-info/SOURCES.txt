@@ -1,0 +1,9 @@
+README.md
+setup.py
+watermelon/__init__.py
+watermelon/watermelon.py
+watermelon_feature_selection.egg-info/PKG-INFO
+watermelon_feature_selection.egg-info/SOURCES.txt
+watermelon_feature_selection.egg-info/dependency_links.txt
+watermelon_feature_selection.egg-info/requires.txt
+watermelon_feature_selection.egg-info/top_level.txt
