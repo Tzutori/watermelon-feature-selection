@@ -206,7 +206,7 @@ class watermelon():
         final_result: indice of selected features
         score_of_selected_features: scores of selected features, better feature has lower score
     '''
-    def watermelon(self,data,labels,n_select=20,threshold_cor=0.5,threshold_nmi=0.3,ovo=True,performance_metric='class balance',min_kde_bandwidth=0.3,kde_bins=1000,nmi_min_bins=10,
+    def watermelon(self,data,labels,n_select=20,threshold_cor=0.5,threshold_nmi=0.5,ovo=True,performance_metric='class balance',min_kde_bandwidth=0.3,kde_bins=1000,nmi_min_bins=10,
                    use_multiprocessing=True,num_multiprocessing=None,verbose=True):
         '''create logger'''
         logger = logging.getLogger('Watermelon{}'.format(time.strftime('%Y%m%d-%H-%M-%S')))
