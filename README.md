@@ -1,4 +1,4 @@
-#watermelon feature selection
+# Watermelon feature selection
 
 This is the python implementation of the feature selection method **watermelon**, original paper (ICPR2020) available soon.
 
