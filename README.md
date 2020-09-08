@@ -8,12 +8,18 @@ Watermelon is a feature selection method which scores the features through estim
 ## Installation
 ### Requirements
 *Python 3.7*
+
 *pandas*
+
 *numpy*
+
 *scipy*
+
 *scikit-learn*
+
 ### Installation
-`pip install watermelon-feature-selection`
+Watermelon can be installed via pip from [PyPI](https://pypi.org/project/watermelon-feature-selection/)
+```pip install watermelon-feature-selection```
 
 ## Code example
 
