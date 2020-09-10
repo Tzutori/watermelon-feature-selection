@@ -10,4 +10,4 @@ if __name__ == "__main__" :
     labels=mat['Y'].flatten()
         
     watermelon_fs=watermelon.watermelon()
-    feature_indice,feature_score=watermelon_fs.watermelon(data,labels,n_select,par_cor,par_nmi)
+    feature_indices,feature_score=watermelon_fs.watermelon(data,labels,n_select,par_cor,par_nmi)
