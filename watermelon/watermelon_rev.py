@@ -36,90 +36,9 @@ class watermelon():
     def __init__(self):
         pass
     
-    
-    # def _getErrorRate(self,data,other_data,min_value,max_value):
-   
-    #     data=data.reshape(-1,1)
-    #     other_data=other_data.reshape(-1,1)
-        
-    #     len_data=len(data)
-    #     len_other_data=len(other_data)
-    #     #Silverman's rule of thumb to determine the bandwidth
-    #     bw=1.06*np.min([np.std(data),iqr(data)/1.34])*len_data**(-0.2)
-    #     bw_other=1.06*np.min([np.std(other_data),iqr(other_data)/1.34])*len_other_data**(-0.2)
-
-    #     bw=max(self.min_kde_bw,bw)
-    #     bw_other=max(self.min_kde_bw,bw_other)
-        
-    #     kde=KernelDensity(kernel='gaussian',bandwidth=bw).fit(data)
-    #     dens=np.exp(kde.score_samples(np.linspace(min_value, max_value,self.kde_bins)[:, np.newaxis]))
-    #     dens=dens/np.sum(dens)
-    #     kde=KernelDensity(kernel='gaussian',bandwidth=bw_other).fit(other_data)
-    #     dens_other=np.exp(kde.score_samples(np.linspace(min_value, max_value,self.kde_bins)[:, np.newaxis]))
-    #     dens_other=dens_other/np.sum(dens_other)
-        
-    #     p_data=len_data/(len_data+len_other_data)
-    #     p_other_data=1-p_data
-        
-    #     ber=0
-
-    #     for i in np.arange(self.kde_bins):
-    #         if dens[i]>dens_other[i]:
-    #             ber+=p_other_data*dens_other[i]
-    #         else:
-    #             ber+=p_data*dens[i]
-       
-    #     return ber
-    
-    # def _getErrorRateDiscrete(self,data,other_data):
-   
-    #     data=data.reshape(-1,1)
-    #     other_data=other_data.reshape(-1,1)
-    #     len_data=len(data)
-    #     len_other_data=len(other_data)
-        
-    #     unique_values_data,counts_data=np.unique(data,return_counts=True)
-    #     unique_values_other_data,counts_other_data=np.unique(other_data,return_counts=True)
-    #     # print(counts_data)
-    #     # print(counts_other_data)
-    #     unique_values_total=np.unique(np.concatenate((unique_values_data,unique_values_other_data)))
-    #     # print('{} {} {}'.format(unique_values_data,unique_values_other_data,unique_values_total))
-    #     dens=np.zeros((len(unique_values_total),))
-    #     dens_other=np.zeros((len(unique_values_total),))
-        
-    #     den_index=0
-    #     for value in unique_values_total:
-    #         identical_value_index=np.nonzero(unique_values_data==value)[0]
-    #         # print(identical_value_index)
-    #         if len(identical_value_index)>0:
-    #             dens[den_index]=counts_data[identical_value_index[0]]
-
-    #         identical_value_other_index=np.nonzero(unique_values_other_data==value)[0]
-    #         # print(identical_value_other_index)
-    #         if len(identical_value_other_index)>0:
-    #             dens_other[den_index]=counts_other_data[identical_value_other_index[0]]            
-    #         den_index+=1
-    #     # print(dens)
-    #     # print(dens_other)
-    #     dens=dens/np.sum(dens)
-    #     dens_other=dens_other/np.sum(dens_other)
-        
-    #     p_data=len_data/(len_data+len_other_data)
-    #     p_other_data=1-p_data
-        
-    #     ber=0
-
-    #     for i in np.arange(len(unique_values_total)):
-    #         if dens[i]>dens_other[i]:
-    #             ber+=p_other_data*dens_other[i]
-    #         else:
-    #             ber+=p_data*dens[i]
-    #     return ber
-    
     def plotKDE(self,data,labels,feature_index,class_name,kde_bins=1000,min_kde_bandwidth=0.3):
         import matplotlib.pyplot as plt
         labels=labels.astype('str')
-        # classes=np.unique(labels)
         feature_data=data[labels==str(class_name),feature_index].reshape(-1,1)
         ptp=np.ptp(data[:,feature_index])
         mean_value=np.mean(data[:,feature_index])
@@ -130,7 +49,6 @@ class watermelon():
         #Silverman's rule of thumb to determine the bandwidth
         bw=max(0.01,1.06*np.min([np.std(feature_data),iqr(feature_data)/1.34])*len_data**(-0.2))
 
-        # bw=max(min_kde_bandwidth,bw)
         # return feature_data
         kde=KernelDensity(kernel='gaussian',bandwidth=bw).fit(feature_data)
         dens=np.exp(kde.score_samples(np.linspace(min_value, max_value,kde_bins)[:, np.newaxis]))
@@ -161,20 +79,17 @@ class watermelon():
     def _getDensity(self,data,min_value,max_value):
    
         data=data.reshape(-1,1)       
-        # len_data=len(data)
         #Silverman's rule of thumb to determine the bandwidth
         bw=1.06*np.min([np.std(data),iqr(data)/1.34])*len(data)**(-0.2)
         bw=max(self.__min_kde_bw,bw)
         
         kde=KernelDensity(kernel='gaussian',bandwidth=bw).fit(data)
         dens=np.exp(kde.score_samples(np.linspace(min_value, max_value,self.__kde_bins)[:, np.newaxis]))
-        # dens=dens/np.sum(dens)
         return dens/np.sum(dens)
 
     def _getDensityDiscrete(self,data):
    
         # data=data.reshape(-1,1)
-
         len_data=len(data)
 
         unique_values_data,counts_data=np.unique(data,return_counts=True)
@@ -210,11 +125,7 @@ class watermelon():
         
         ber+=p_other_dens*np.sum(dens_other*(dens>dens_other),axis=1)
         ber+=p_dens*np.sum(dens*(dens<=dens_other),axis=1)
-       
         return ber
-    
-
-
 
 
     def getErrorRateParallel(self,data,labels,classes):
@@ -509,83 +420,3 @@ class watermelon():
         
         return final_result,score_of_selected_features
         
-# import scipy.io
-# # from watermelon import watermelon
-# import pandas as pd
-# import numpy as np
-# from itertools import repeat
-# from sklearn import preprocessing
-# from sklearn.ensemble import RandomForestClassifier
-# from sklearn.svm import LinearSVC
-
-
-# if __name__ == "__main__" :           
-#     par_cor=0.5
-#     par_nmi=0.5
-#     n_select=200
-#     result=pd.DataFrame(columns=[str(i) for i in np.arange(n_select)],dtype='int32')	
-#     # for name in zip(['colon'],
-#     #                 [0.6]):
-#     # for name in zip(['CLL_SUB_111'],
-#     #                 [1.2]):
-#     # for name in zip(['colon','lymphoma','nci9','PCMAC',],
-#     #                 repeat(0.3)):
-#     for name in zip(['CLL_SUB_111','COIL20','colon','GLIOMA','Isolet','lung','lymphoma','nci9','ORL','orlraws10P','PCMAC','TOX_171','USPS','warpAR10P','warpPIE10P','Yale','gisette'],
-#                     [1.2,0.3,0.9,0.6,0.3,0.3,0.9,0.6,0.3,0.3,0.6,1.2,0.3,0.3,0.3,0.3,0.3],
-#                     [False, False, True,False,False,False,True,True,False,False,True,False,False,False,False,False,False]):
-#     # for name in zip(['CLL_SUB_111','COIL20','colon','GLIOMA','Isolet','lung','lymphoma','nci9','ORL','orlraws10P','PCMAC','TOX_171','USPS','warpAR10P','warpPIE10P','Yale','gisette'],
-#     #                 repeat(0.3)):
-#         print(name[0])
-#         mat = scipy.io.loadmat(r'H:\04_Python\Feature Selection\data\{}.mat'.format(name[0]))
-#         data=mat['X']
-#         labels=mat['Y'].flatten()
-        
-#         scaler=preprocessing.StandardScaler().fit(data)
-#         data_preprocessed=scaler.transform(data)
-#         watermelon_fs=watermelon()
-#         feature_indices,feature_score=watermelon_fs.watermelon(data_preprocessed,labels,n_select,par_cor,par_nmi,ovo=True,performance_metric='best performance',min_kde_bandwidth=name[1],verbose=True,is_discrete_data=name[2])
-#         result.loc[name[0],:]=feature_indices[:n_select]                          
-#         result=result.astype('int32')
-#         result.to_excel(r'H:\04_Python\Feature Selection\feature selection SOTA\results\svm 100 repeat 20 test\Debug\Watermelon_refactory_best_performance0505_95dcay.xlsx')
-#         pd.DataFrame(feature_score).to_excel(r'H:\04_Python\Feature Selection\feature selection SOTA\results\svm 100 repeat 20 test\Debug\Watermelon_{}_Watermelon_refactory_best_performance_0505_95decay.xlsx'.format(name))
-    
-
-# def calculateWatermelonTestError(result_filepath,output_filepath,plt_num=[10,25,50,75,100,125,150,175,200],test_size=0.2,repeat=10,random_state_seeds=[0,1,2,3,4,5,6,7,8,9]):#
-#     from sklearn.model_selection import StratifiedShuffleSplit,StratifiedKFold
-#     test_result=pd.read_excel(result_filepath)
-    
-#     # test_acc=np.zeros((len(result),len(plt_num),repeat*len(random_state_seeds)))
-#     test_acc=np.zeros((17,len(plt_num),repeat*len(random_state_seeds)))
-#     test_acc_mean=np.zeros((17,len(plt_num)))
-    
-    
-#     cur_x=0
-#     for index,item in test_result.iterrows():
-#         mat = scipy.io.loadmat(r'H:\04_Python\Feature Selection\data\{}.mat'.format(item.values[0]))
-#         data=mat['X']
-#         labels=mat['Y'].flatten()
-#         scaler=preprocessing.StandardScaler().fit(data)
-#         data_preprocessed=scaler.transform(data)
-#         i=0
-#         for random_state in random_state_seeds:
-#             kf=StratifiedShuffleSplit(n_splits=repeat,test_size=test_size,random_state=random_state)  
-#             for train_index, test_index in kf.split(data_preprocessed,labels):
-#                 X_train, X_test = data_preprocessed[train_index], data_preprocessed[test_index]
-#                 y_train, y_test = labels[train_index], labels[test_index]
-                
-#                 feature_indexes = np.delete((item.values[1:]).astype('int32'), np.where(item.values == -1))
-#                 cur_y=0
-#                 for f_num in plt_num:
-#                     linSVM_clf = LinearSVC()#LinearSVC()RandomForestClassifier#HistGradientBoostingClassifier
-                    
-#                     linSVM_clf.fit(X_train[:,feature_indexes[:f_num]],y_train)
-#                     test_acc[cur_x,cur_y,i]=linSVM_clf.score(X_test[:,feature_indexes[:f_num]],y_test)
-#                     cur_y+=1
-#                 i+=1
-#         cur_x+=1
-#     test_acc_mean=np.mean(test_acc,axis=2)
-#     pd.DataFrame(test_acc_mean).to_excel(output_filepath)
-
-# calculateWatermelonTestError(r'H:\04_Python\Feature Selection\feature selection SOTA\results\svm 100 repeat 20 test\Debug\Watermelon_refactory_best_performance0505_95dcay.xlsx',
-#                               r'H:\04_Python\Feature Selection\feature selection SOTA\results\svm 100 repeat 20 test\Debug\acc_mean_100repeat_Watermelon_refactory_best_performance0505_95dcay.xlsx')
-
