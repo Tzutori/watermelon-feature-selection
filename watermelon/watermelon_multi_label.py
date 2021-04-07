@@ -128,8 +128,8 @@ class watermelon():
         return ber
 
 
-    def getErrorRateParallel(self,data,labels,classes):
-        n_class=len(classes)
+    def getErrorRateParallel(self,data,labels):
+        n_class=labels.shape[1]
         n_subfeature=data.shape[1]
         if not self.__is_discrete_data:
             ptp=np.ptp(data,axis=0)
@@ -140,7 +140,7 @@ class watermelon():
         density_matrix=np.zeros((n_class,n_subfeature,self.__kde_bins),dtype='float')
         counts_per_class=np.zeros((n_class,),dtype='int')
         for index_class in np.arange(n_class):
-            sub_data=data[labels==classes[index_class],:]
+            sub_data=data[labels[:,index_class]==1,:]
             if sub_data.ndim==1:
                 counts_per_class[index_class]=0
             else:
@@ -249,7 +249,7 @@ class watermelon():
     '''
     Parameters:
         data: (n_sample, n_feature) ndarray
-        labels: (n_sample,) ndarray
+        labels: (n_sample,n_class) ndarray, one-hot encoding
         n_select: number of features to be selected
         threshold_cor: th for feature redudancy
         threshold_nmi: th for feature relevance
@@ -316,9 +316,11 @@ class watermelon():
             n_feature-=len(zero_std_col)
             
         #get classes
-        labels=labels.astype('str')
-        classes=np.unique(labels)
-        n_class=len(classes)
+        # labels=labels.astype('str')
+        # classes=np.unique(labels)
+        classes=labels.shape[1]
+        # n_class=len(classes)
+        n_class=labels.shape[1]
         if n_sample<1 or n_feature<1 or n_class<2:
             logger.error('Input data not feasible')
             return
@@ -346,7 +348,7 @@ class watermelon():
             data_list=[data[:,split] for split in data_splits]
             #calculate BERs
             with Pool(processes=num_multiprocessing) as pool:
-                results=pool.starmap(self.getErrorRateParallel,zip(data_list,repeat(labels),repeat(classes)))
+                results=pool.starmap(self.getErrorRateParallel,zip(data_list,repeat(labels)))
             if self.__ovo==True:
                 n_class=comb(n_class,2,True)
             #cache feature scores
@@ -419,4 +421,31 @@ class watermelon():
         logger.debug('Feature selection finished. Time elapsed: {:.2f}s'.format(timer_end-timer_start))
         
         return final_result,score_of_selected_features
+        
+if __name__ == "__main__" :           
+    from sklearn.preprocessing import OneHotEncoder
+    import scipy.io
+    from sklearn import preprocessing
+    
+    par_cor=0.5
+    par_nmi=0.3
+    n_select=200
+    result=pd.DataFrame(columns=[str(i) for i in np.arange(n_select)],dtype='int32')
+    for name in zip(['colon'],
+                    [0.6]):
+        print(name[0])
+        mat = scipy.io.loadmat(r'H:\04_Python\Feature Selection\data\colon.mat')
+        data=mat['X']
+        labels=mat['Y']
+        enc = OneHotEncoder(handle_unknown='ignore')
+        labels=enc.fit_transform(labels).toarray()
+        	
+        scaler=preprocessing.StandardScaler().fit(data)
+        data_preprocessed=scaler.transform(data)
+        watermelon_fs=watermelon()
+        feature_indices,feature_score=watermelon_fs.watermelon(data_preprocessed,labels,n_select,par_cor,par_nmi,ovo=True,performance_metric='class balance',min_kde_bandwidth=name[1],verbose=True,is_discrete_data=True)
+        result.loc[name[0],:]=feature_indices[:n_select]                          
+        result=result.astype('int32')
+        result.to_excel(r'H:\04_Python\Feature Selection\GitHub\watermelon-feature-selection\watermelon\Watermelon_multi_label.xlsx')
+        
         
