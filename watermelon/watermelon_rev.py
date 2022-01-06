@@ -449,27 +449,4 @@ class watermelon():
         logger.debug('Feature selection finished. Time elapsed: {:.2f}s'.format(timer_end-timer_start))
         
         return final_result,score_of_selected_features
-        
-if __name__ == "__main__" :           
-    from sklearn.preprocessing import OneHotEncoder
-    import scipy.io
-    from sklearn import preprocessing
-    
-    par_cor=0.5
-    par_nmi=0.3
-    n_select=20
-    result=pd.DataFrame(columns=[str(i) for i in np.arange(n_select)],dtype='int32')
-    for name in zip(['colon'],
-                    [0.6]):
-        print(name[0])
-        mat = scipy.io.loadmat(r'H:\04_Python\Feature Selection\data\colon.mat')
-        data=mat['X']
-        labels=mat['Y'].flatten()
-        	
-        scaler=preprocessing.StandardScaler().fit(data)
-        data_preprocessed=scaler.transform(data)
-        watermelon_fs=watermelon()
-        feature_indices,feature_score=watermelon_fs.watermelon(data_preprocessed,labels,n_select,par_cor,par_nmi,ovo=True,performance_metric='class balance',min_kde_bandwidth=name[1],verbose=True,is_discrete_data=True)
-        result.loc[name[0],:]=feature_indices[:n_select]                          
-        result=result.astype('int32')
-        result.to_excel(r'H:\04_Python\Feature Selection\GitHub\watermelon-feature-selection\watermelon\Watermelon_origin_label.xlsx')                                                   
+                                                      
