@@ -89,7 +89,7 @@ class watermelon():
 
     def _getDensityDiscrete(self,data):
    
-        # data=data.reshape(-1,1)
+
         len_data=len(data)
 
         unique_values_data,counts_data=np.unique(data,return_counts=True)
@@ -109,14 +109,15 @@ class watermelon():
         dens=density_matrix[index_class,:,:]
         counts_class=counts_per_class[index_class]
         if index_other_class is None:#one vs all
-            dens_other=np.sum(np.delete(density_matrix,index_class,axis=0),axis=0)/(density_matrix.shape[0]-1)
+            counts_den=density_matrix*np.tile(counts_per_class.reshape(-1,1,1),(1,density_matrix.shape[1],density_matrix.shape[2]))
+            dens_other=np.sum(np.delete(counts_den,index_class,axis=0),axis=0)/(np.sum(counts_per_class)-counts_class)
             counts_other_class=np.sum(counts_per_class)-counts_class
         else:#one vs one
             dens_other=density_matrix[index_other_class,:,:]
             counts_other_class=counts_per_class[index_other_class]
         
         if counts_class==0 or counts_other_class==0:
-            return 0.5
+            return 1
         
         p_dens=counts_class/(counts_class+counts_other_class)
         p_other_dens=1-p_dens
@@ -178,41 +179,57 @@ class watermelon():
                 result[this_index,other_index]=normalized_mutual_info_score(current_data,current_other_data,average_method='arithmetic')
         return result
     
-    def calculateFeatureScore(self,score_list,score_of_select_feature,spearman_coe,nmi_coe,result):
+    def calculateFeatureScore(self,score_list,score_of_select_feature,spearman_coe,nmi_coe,result,is_update_selected_feature_score=True):
         #shape of (n_class,n_to_evaluate_feature,n_selected_feature+1)
-        result_new_score=np.zeros((score_list.shape[0],score_list.shape[1],len(result)+1))
+        # result_new_score=np.zeros((score_list.shape[0],score_list.shape[1],len(result)+1))
         result_new_feature_index=-1
         #index of the features of current to-evaluate feature subset
         new_feature_index_map=score_list.columns.astype('int').values
         #scores of to-evaluate features, will be updated iteratively
-        new_feature_score=score_list.to_numpy(copy=True)
-        #iter over selected feature and update scores
-        for selected_feature_index in range(score_of_select_feature.shape[1]):
-            #make matrix to speed up score calculation, shape is (n_class,n_to_evaluate_feature)
-            tiled_selected_score=np.tile(score_of_select_feature[:,selected_feature_index].reshape(-1,1),(1,score_list.shape[1]))
-            #update according to nmi and cor
-            #use largest cor between selected features and each to-evaluate feature, because it is dominant. Shape is (1, n_to_evaluate_feature)
-            cor_max=np.max(spearman_coe[np.ix_(result,new_feature_index_map)],axis=0).reshape(1,-1)
-            #Shape is (1, n_to_evaluate_feature)
-            cur_nmi=nmi_coe[result[selected_feature_index],new_feature_index_map].reshape(1,-1)
-            #positive values: selected feature should be updated; negative values: new feature should be updated
-            score_diff=tiled_selected_score-new_feature_score
-            update_selected_feature_score=score_diff*(score_diff>0)
-            update_new_feature_score=score_diff*(score_diff<=0)*(-1)
-            #update selected features
+        
+                                                     
+                                                                              
+        #make matrix to speed up score calculation, shape is (n_class,n_to_evaluate_feature,n_selected_feature)
+        tiled_selected_score=np.swapaxes(np.tile(score_of_select_feature[:,:,None],(1,1,score_list.shape[1])),1,2)
+        tiled_new_feature_score=np.tile(score_list.values[:,:,None],(1,1,score_of_select_feature.shape[1]))
+        #update according to nmi and cor
+        #use largest cor between selected features and each to-evaluate feature, because it is dominant.
+                                                                                                   
+        #Shape is (1, n_to_evaluate_feature)
+        cor_max=np.max(spearman_coe[np.ix_(result,new_feature_index_map)],axis=0).reshape(1,-1)
+        #Shape is (n_class, n_to_evaluate_feature,n_selected_feature)
+        cor_max=np.tile(cor_max[:,:,None],(score_of_select_feature.shape[0],1,score_of_select_feature.shape[1]))
+        #Shape is (n_selected_feature, n_to_evaluate_feature)
+        cur_nmi=nmi_coe[np.ix_(result,new_feature_index_map)].reshape(len(result),-1)
+        #Shape is (n_class, n_selected_feature,n_to_evaluate_feature)
+        cur_nmi=np.tile(cur_nmi[None,:,:],(score_of_select_feature.shape[0],1,1))
+        #Shape is (n_class, n_to_evaluate_feature,n_selected_feature)
+        cur_nmi=np.swapaxes(cur_nmi,1,2)
+        
+        #positive values: selected feature should be updated; negative values: new feature should be updated
+        score_diff=tiled_selected_score-tiled_new_feature_score
+        update_selected_feature_score=score_diff*(score_diff>0)
+        update_new_feature_score=score_diff*(score_diff<=0)*(-1)
+        #update selected features
+        if is_update_selected_feature_score is True:
             temp_selected_feature_score=tiled_selected_score-update_selected_feature_score*self.activate_function(cur_nmi,self.__th_nmi)
             temp_selected_feature_score+=(tiled_selected_score-temp_selected_feature_score)*self.activate_function(cor_max,self.__th_cor)*self.__decay
             temp_selected_feature_score=np.clip(temp_selected_feature_score,a_min=None,a_max=tiled_selected_score)
-            #update new features
-            new_feature_max_score=np.ones(new_feature_score.shape)
-            new_feature_score-=update_new_feature_score*self.activate_function(cur_nmi,self.__th_nmi)
-            new_feature_score+=(new_feature_max_score-new_feature_score)*self.activate_function(cor_max,self.__th_cor)*self.__decay
-            new_feature_score=np.clip(new_feature_score,a_min=None,a_max=new_feature_max_score)
-            #save updated scores of selected features regarding current to-evaluate feature
-            result_new_score[:,:,selected_feature_index]=temp_selected_feature_score
-        #save scores of all to-evaluate features
-        result_new_score[:,:,-1]=new_feature_score
-        
+        else:
+            temp_selected_feature_score=tiled_selected_score
+        #update new features
+        new_feature_max_score=np.ones(tiled_new_feature_score.shape)
+        temp_new_feature_score=tiled_new_feature_score-update_new_feature_score*self.activate_function(cur_nmi,self.__th_nmi)
+        temp_new_feature_score+=(new_feature_max_score-temp_new_feature_score)*self.activate_function(cor_max,self.__th_cor)*self.__decay
+        temp_new_feature_score=np.clip(temp_new_feature_score,a_min=None,a_max=new_feature_max_score)
+                                                                                           
+                                                                                    
+                                                
+                                                  
+
+        #shape of (n_class,n_to_evaluate_feature,n_selected_feature+1)
+        result_new_score=np.concatenate([temp_selected_feature_score,np.mean(temp_new_feature_score,axis=2)[:,:,None]],axis=2)
+        # print(result_new_score.shape)
         if self.__performance_metric=='best performance':
             result_new_feature_index=np.argmin(np.sum(np.sum(result_new_score,axis=2),axis=0))
         elif self.__performance_metric=='class balance':
@@ -268,7 +285,7 @@ class watermelon():
         score_of_selected_features: scores of selected features, better feature has lower score
     '''
     def watermelon(self,data,labels,n_select=20,threshold_cor=0.5,threshold_nmi=0.5,ovo=True,performance_metric='class balance',min_kde_bandwidth=0.3,kde_bins=1000,nmi_min_bins=10,
-                   use_multiprocessing=True,num_multiprocessing=None,verbose=True,is_discrete_data=False):
+                   use_multiprocessing=True,num_multiprocessing=None,verbose=True,is_discrete_data=False,result_type=2,is_update_selected_feature_score=True):
         '''create logger'''
         self.__logger_name='Watermelon{}'.format(time.strftime('%Y%m%d-%H-%M-%S'))
         logger = logging.getLogger(self.__logger_name)
@@ -300,6 +317,7 @@ class watermelon():
             logger.error("performance_metric should be 'best performance' or 'class balance'")
             return
         '''data processing'''
+        timer_start = time.time()                         
         logger.debug('Data preprocessing...')
         #get number samples and features
         n_sample,n_feature=data.shape
@@ -329,7 +347,7 @@ class watermelon():
             self.__unique_values_data,self.__counts_data=np.unique(data,return_counts=True)
             if len(self.__unique_values_data)>self.__kde_bins:
                 self.__kde_bins=len(self.__unique_values_data)
-                logger.debug('Increase the parameter kde_bins to {} for better data intepretation'.format(counts_data))
+                logger.debug('Increase the parameter kde_bins to {} for better data intepretation'.format(self.__counts_data))
         else:
             digitized_data=self.digitizeData(data)
         logger.debug('Data preprocessing finished')
@@ -358,13 +376,26 @@ class watermelon():
         timer_BER=time.time()
         logger.debug('Estimation finisched. Time elapsed: {:.2f}s'.format(timer_BER-timer_start))
         
+        sorted_index=np.argsort(np.sum(score_of_rest_features.values,axis=0))
+        '''check if too many features removed'''
+        if n_feature<n_select:
+            timer_end = time.time()
+            logger.debug('Only {} features have non-zero variance, feature selection finished. Time elapsed: {:.2f}s'.format(n_feature,timer_end-timer_start))
+            return np.concatenate((index_map[sorted_index],zero_std_col)),np.concatenate((score_of_rest_features.values[:,sorted_index],np.ones((n_class,len(zero_std_col)),dtype='float')),axis=1)
         '''select first feature'''
         #init selected feature score list
         score_of_selected_features=np.zeros((n_class,n_select),dtype='float')
         #get the init ranking after calculating the BERs
         result=[]
+        sorted_index=sorted_index[:n_select]
+        #finish the process if only use BER
+        if result_type==0:
+            final_result=index_map[sorted_index]
+            timer_end = time.time()
+            logger.debug('Feature selection finished. Time elapsed: {:.2f}s'.format(timer_end-timer_start))
+            return final_result,score_of_rest_features.values[:,sorted_index]
         #index of first n_select features with best BERs.
-        sorted_index=np.argsort(np.sum(score_of_rest_features.values,axis=0))[:n_select]
+
         first_selection=sorted_index[0]
         #update scores
         result.append(first_selection)
@@ -386,14 +417,15 @@ class watermelon():
         nmi_calculated_index=np.full((n_feature,),-1,dtype='int')
         nmi_calculated_index[sorted_index]=[1]*len(sorted_index)
         #calculate nmi of fisrt n_select features to other features, do not calculate all the nmis due to time efficiency
-        if use_multiprocessing:#TODO
-            digitized_data_list=[digitized_data[:,split] for split in data_splits]
-            with Pool(processes=num_multiprocessing) as pool:
-                results=pool.starmap(self.getNmiParallel,zip(repeat(digitized_data[:,sorted_index]),digitized_data_list))
-            nmi_coe[sorted_index,:]=np.concatenate(results,axis=1)
-            nmi_coe[:,sorted_index]=nmi_coe[sorted_index,:].transpose()
-        timer_nmi_first=time.time()
-        logger.debug('Time elapsed: {:.2f}s'.format(timer_nmi_first-timer_spearman))
+        if result_type==2:                  
+            if use_multiprocessing:#TODO
+                digitized_data_list=[digitized_data[:,split] for split in data_splits]
+                with Pool(processes=num_multiprocessing) as pool:
+                    results=pool.starmap(self.getNmiParallel,zip(repeat(digitized_data[:,sorted_index]),digitized_data_list))
+                nmi_coe[sorted_index,:]=np.concatenate(results,axis=1)
+                nmi_coe[:,sorted_index]=nmi_coe[sorted_index,:].transpose()
+            timer_nmi_first=time.time()
+            logger.debug('Time elapsed: {:.2f}s'.format(timer_nmi_first-timer_spearman))
         # self.__decay=1#TODO
         
         '''select 2. to n_select. feature'''
@@ -402,11 +434,12 @@ class watermelon():
             #calculate new scores
             updated_score,updated_index=self.calculateFeatureScore(score_of_rest_features,score_of_selected_features[:,:len(result)],spearman_coe,nmi_coe,result)
             # update nmi
-            if nmi_calculated_index[updated_index] != 1:
-                with Pool() as pool:
-                    results=pool.starmap(self.getNmiParallel,zip(repeat(digitized_data[:,updated_index].reshape(-1,1)),digitized_data_list))
-                nmi_coe[:,updated_index]=nmi_coe[updated_index,:]=np.concatenate(results,axis=1)
-                nmi_calculated_index[updated_index]=1
+            if result_type==2:                  
+                if nmi_calculated_index[updated_index] != 1:
+                    with Pool() as pool:
+                        results=pool.starmap(self.getNmiParallel,zip(repeat(digitized_data[:,updated_index].reshape(-1,1)),digitized_data_list))
+                    nmi_coe[:,updated_index]=nmi_coe[updated_index,:]=np.concatenate(results,axis=1)
+                    nmi_calculated_index[updated_index]=1
                 
             result.append(updated_index)
             score_of_selected_features[:,:len(result)]=updated_score
@@ -414,7 +447,7 @@ class watermelon():
 
             timer_selection_end=time.time()
             logger.debug('{}. feature selected. Time elapsed: {:.2f}s'.format(current_index+1,timer_selection_end-timer_selection_start))
-            self.__decay*=0.95
+            #self.__decay*=0.95
         # return result
         final_result=index_map[np.array(result)]
         timer_end = time.time()
@@ -429,7 +462,7 @@ if __name__ == "__main__" :
     
     par_cor=0.5
     par_nmi=0.3
-    n_select=200
+    n_select=20
     result=pd.DataFrame(columns=[str(i) for i in np.arange(n_select)],dtype='int32')
     for name in zip(['colon'],
                     [0.6]):
