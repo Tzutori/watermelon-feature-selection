@@ -1,6 +1,6 @@
 import scipy.io
 from sklearn.preprocessing import OneHotEncoder
-from watermelon import watermelon
+from watermelon_multi_label import watermelon
 if __name__ == "__main__" :           
     par_cor=0.5
     par_nmi=0.5
